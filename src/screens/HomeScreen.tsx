@@ -16,11 +16,15 @@ import BluetoothClassic, {
   BluetoothDevice,
 } from 'react-native-bluetooth-classic';
 
+
 const HomeScreen = ({navigation}: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<BluetoothDevice | null>(null);
+  const [pairedModalVisible, setPairedModalVisible] = useState(false);
+  const [pairedDevices, setPairedDevices] = useState<BluetoothDevice[]>([]);
+
 
   // Verifica se o Bluetooth está ativado
   const checkBluetoothState = async () => {
@@ -166,6 +170,27 @@ const HomeScreen = ({navigation}: any) => {
     }
   };
 
+  const showPairedDevices = async () => {
+    try {
+      const bluetoothOk = await checkBluetoothState();
+      if (!bluetoothOk) return;
+  
+      const permissionOk = await requestPermissions();
+      if (!permissionOk) {
+        Alert.alert('Permissões necessárias', 'Permissões Bluetooth negadas.');
+        return;
+      }
+  
+      const bonded = await BluetoothClassic.getBondedDevices();
+      setPairedDevices(bonded);
+      setPairedModalVisible(true);
+    } catch (error) {
+      console.error('Erro ao buscar dispositivos emparelhados:', error);
+      Alert.alert('Erro', 'Não foi possível buscar os dispositivos emparelhados.');
+    }
+  };
+  
+
   return (
     <View style={styles.container}>
       <Image
@@ -175,12 +200,12 @@ const HomeScreen = ({navigation}: any) => {
       <Text style={styles.title}>Conexão Bluetooth</Text>
 
       <TouchableOpacity style={styles.button} onPress={scanDevices}>
-        <Text style={styles.buttonText}>Procurar dispositivos via </Text>
+        <Text style={styles.buttonText}>Procurar dispositivos via Bluetooth </Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
         style={styles.button}
-        onPress={() => navigation.navigate('PairedDevices')}
+        onPress={showPairedDevices}
       >
         <Text style={styles.buttonText}>Dispositivos emparelhados</Text>
       </TouchableOpacity>
@@ -243,6 +268,49 @@ const HomeScreen = ({navigation}: any) => {
           </View>
         </View>
       </Modal>
+      <Modal
+  visible={pairedModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setPairedModalVisible(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalBox}>
+      <Text style={styles.modalTitle}>Dispositivos Emparelhados</Text>
+
+      {pairedDevices.length === 0 ? (
+        <Text style={styles.noDevicesText}>Nenhum dispositivo emparelhado encontrado</Text>
+      ) : (
+        <FlatList
+          data={pairedDevices}
+          keyExtractor={(item) => item.address}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.deviceItem,
+                selectedDevice?.address === item.address && styles.selectedDevice,
+              ]}
+              onPress={() => handleDeviceSelect(item)}
+            >
+              <Text style={styles.deviceText}>{item.name || 'Dispositivo desconhecido'}</Text>
+              <Text style={styles.deviceTextSmall}>{item.address}</Text>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
+
+      <View style={styles.modalButtons}>
+        <TouchableOpacity
+          style={[styles.modalButton, styles.closeButton]}
+          onPress={() => setPairedModalVisible(false)}
+        >
+          <Text style={styles.modalButtonText}>Fechar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 };

@@ -73,3 +73,12 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+!principal/
+!.gitignore
+!package.json
+!app.json
+!babel.config.js
+!metro.config.js
+!index.js
+!assets/
