@@ -4,16 +4,19 @@ import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type RootStackParamList = {
-  Chat: { device: { name: string, address: string } };
+  Home: undefined;
+  Chat: { device: { name: string; address: string } }; 
 };
 
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chat'>;
+type ChatScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Chat'>;
 
 type Props = {
   route: ChatScreenRouteProp;
+  navigation: ChatScreenNavigationProp;
 };
 
-const ChatScreen: React.FC<Props> = ({ route }) => {
+const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   const { device } = route.params;
   const [mensagem, setMensagem] = useState('');
   const [historico, setHistorico] = useState<{ id: string; texto: string }[]>([]);
@@ -22,7 +25,7 @@ const ChatScreen: React.FC<Props> = ({ route }) => {
     if (mensagem.trim() !== '') {
       setHistorico([...historico, { id: Date.now().toString(), texto: mensagem }]);
       setMensagem('');
-      // Aqui você pode adicionar envio via Bluetooth
+      
     }
   };
 

@@ -1,10 +1,12 @@
-// App.tsx
 import React from 'react';
-import { SafeAreaView, StatusBar } from 'react-native';
-import HomeScreen from './src/screens/HomeScreen'; 
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
-const Stack = createNativeStackNavigator();
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from './src/screens/HomeScreen';
+import ChatScreen from './src/screens/ChatScreen';
+import { RootStackParamList } from './src/types/navigation';
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
 const App = () => {
   return (
     <NavigationContainer>
@@ -14,9 +16,11 @@ const App = () => {
           component={HomeScreen}
           options={{ title: 'Início' }}
         />
-        {/* outras telas vão aqui, como:
-        <Stack.Screen name="ScanDevices" component={ScanScreen} />
-        */}
+        <Stack.Screen
+          name="Chat"
+          component={ChatScreen}
+          options={{ title: 'Chat Bluetooth' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

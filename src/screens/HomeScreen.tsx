@@ -163,6 +163,7 @@ const HomeScreen = ({navigation}: any) => {
       if (isConnected) {
         Alert.alert('Sucesso', `Conectado a ${device.name || device.address}`);
         setModalVisible(false);
+        navigation.navigate('Chat', { device });
       }
     } catch (error) {
       Alert.alert('Erro', `Falha ao conectar a ${device.name || device.address}`);
