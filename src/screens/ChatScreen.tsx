@@ -74,28 +74,75 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timestamp).toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false
+    });
   };
 
-  const renderMensagem = ({ item }: { item: Mensagem }) => (
-    <View style={[
-      styles.messageContainer,
-      item.isSent ? styles.sentMessage : styles.receivedMessage
-    ]}>
-      <View style={[
-        styles.messageBubble,
-        item.isSent ? styles.sentBubble : styles.receivedBubble
-      ]}>
-        <Text style={styles.messageText}>{item.texto}</Text>
-        <Text style={[
-          styles.timestamp,
-          item.isSent ? styles.sentTimestamp : styles.receivedTimestamp
+  const formatRelativeDate = (timestamp: number) => {
+    const today = new Date();
+    const messageDate = new Date(timestamp);
+    
+    today.setHours(0, 0, 0, 0);
+    messageDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - messageDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return "Hoje";
+    } else if (diffDays === 1) {
+      return "Ontem";
+    } else if (diffDays === 2) {
+      return "Anteontem";
+    } else if (diffDays > 2 && diffDays < 7) {
+      return `${diffDays} dias atrás`;
+    } else {
+      return messageDate.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+  };
+
+  const renderMensagem = ({ item, index }: { item: Mensagem, index: number }) => {
+    const showDate = index === 0 || 
+      new Date(historico[index - 1].timestamp).getDate() !== 
+      new Date(item.timestamp).getDate();
+    
+    return (
+      <View>
+        {showDate && (
+          <View style={styles.dateSeparator}>
+            <Text style={styles.dateSeparatorText}>
+              {formatRelativeDate(item.timestamp)}
+            </Text>
+          </View>
+        )}
+        
+        <View style={[
+          styles.messageContainer,
+          item.isSent ? styles.sentMessage : styles.receivedMessage
         ]}>
-          {formatDate(item.timestamp)}
-        </Text>
+          <View style={[
+            styles.messageBubble,
+            item.isSent ? styles.sentBubble : styles.receivedBubble
+          ]}>
+            <Text style={styles.messageText}>{item.texto}</Text>
+            <Text style={[
+              styles.timestamp,
+              item.isSent ? styles.sentTimestamp : styles.receivedTimestamp
+            ]}>
+              {formatDate(item.timestamp)}
+            </Text>
+          </View>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -125,6 +172,19 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
           <Image 
             source={require('../../assets/send.png')} 
             style={styles.sendIcon} 
+          />
+        </TouchableOpacity>
+        <TouchableOpacity > 
+          <Image
+            source={require('../../assets/camm.png')} 
+            style = {styles.camButton}
+          />
+        </TouchableOpacity>
+        
+        <TouchableOpacity> 
+          <Image 
+            source={require('../../assets/mic.png')}
+            style = {styles.micButton}
           />
         </TouchableOpacity>
         
@@ -192,37 +252,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    backgroundColor: '#fff',
+
+    borderRadius: 15,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
   input: {
-    flex: 1,
+    width:630,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginRight: 8,
-    backgroundColor: '#f9f9f9',
     fontSize: 16,
+    height: 40,
+    
   },
   sendButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-  
     justifyContent: 'center',
     alignItems: 'center',
   },
   disabledButton: {
-    
+    opacity: 0.5,
   },
   sendIcon: {
     width: 35,
     height: 35,
-   
   },
+  dateSeparator: {
+    alignSelf: 'center',
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 10,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    color: '#555',
+  },
+  camButton:{
+    width: 40,
+    height: 35,
+
+  },
+  micButton:{
+    width:40,
+    height:35,
+
+  }
 });
 
 export default ChatScreen;
