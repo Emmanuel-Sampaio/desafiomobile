@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, TouchableOpacity, Image, PermissionsAndroid, Platform, Modal, Button } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AudioRecorderPlayer, { AudioSet, AVEncoderAudioQualityIOSType, AVEncodingOption } from 'react-native-audio-recorder-player';
+let audioRecorderPlayer: AudioRecorderPlayer = new AudioRecorderPlayer();
 
 type RootStackParamList = {
   Home: undefined;
@@ -23,6 +25,7 @@ type Mensagem = {
   deviceId: string;
   timestamp: number;
   isSent: boolean;
+  audioPath?: string; // Para armazenar o caminho do áudio
 };
 
 const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
@@ -30,6 +33,10 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   const [mensagem, setMensagem] = useState('');
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const storageKey = `chatHistory_${device.address}`;
+  const audioRecorderPlayer = new AudioRecorderPlayer();
+  const [gravando, setGravando] = useState(false);
+  const [audioPath, setAudioPath] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -74,68 +81,172 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
+    return new Date(timestamp).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     });
   };
 
   const formatRelativeDate = (timestamp: number) => {
     const today = new Date();
     const messageDate = new Date(timestamp);
-    
+
     today.setHours(0, 0, 0, 0);
     messageDate.setHours(0, 0, 0, 0);
-    
+
     const diffTime = today.getTime() - messageDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return "Hoje";
-    } else if (diffDays === 1) {
-      return "Ontem";
-    } else if (diffDays === 2) {
-      return "Anteontem";
-    } else if (diffDays > 2 && diffDays < 7) {
-      return `${diffDays} dias atrás`;
-    } else {
-      return messageDate.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays === 2) return 'Anteontem';
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    return messageDate.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const solicitarPermissaoAudio = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    return true;
+  };
+
+  const iniciarGravacao = async () => {
+    const permissao = await solicitarPermissaoAudio();
+    if (!permissao) return;
+
+    const result = await audioRecorderPlayer.startRecorder();
+    setAudioPath(result);
+    setGravando(true);
+    setModalVisible(true);
+  };
+
+  const pararGravacao = async () => {
+    try {
+      const result = await audioRecorderPlayer.pauseRecorder()
+      console.log("Gravação parada:", result); // Verifique se o áudio parou
+      setGravando(false);
+      return result;
+    } catch (error) {
+      console.log("Erro ao parar gravação:", error);
     }
   };
 
-  const renderMensagem = ({ item, index }: { item: Mensagem, index: number }) => {
-    const showDate = index === 0 || 
-      new Date(historico[index - 1].timestamp).getDate() !== 
-      new Date(item.timestamp).getDate();
-    
+  const cancelarEnvioAudio = async () => {
+    try {
+      if (gravando) {
+        await pararGravacao();
+      }
+      setAudioPath('');
+      setModalVisible(false);
+    } catch (error) {
+      console.log("Erro ao cancelar envio de áudio:", error);
+    }
+  };
+  const enviarAudio = async () => {
+    try {
+      setGravando(false); 
+      
+      await pararGravacao(); // Garantir que a gravação seja parada antes de continuar
+  
+      const novaMensagem: Mensagem = {
+        id: Date.now().toString(),
+        texto: '[Áudio enviado]',
+        deviceId: device.address,
+        timestamp: Date.now(),
+        isSent: true,
+        audioPath: audioPath,
+      };
+  
+      setHistorico([...historico, novaMensagem]);
+      setModalVisible(false);
+      setAudioPath('');
+    } catch (error) {
+      console.log("Erro ao enviar áudio:", error);
+    }
+  };
+  
+  
+  const pedirPermissoesArmazenamento = async () => {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+    );
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+      console.log("Permissão de leitura de armazenamento negada");
+    }
+  };
+
+  const reproduzirAudio = async (audioPath: string) => {
+    if (!audioPath) {
+      console.warn('Caminho de áudio inválido');
+      return;
+    }
+  
+    try {
+      await audioRecorderPlayer.startPlayer(audioPath);
+  
+      audioRecorderPlayer.addPlayBackListener((e) => {
+        if (e.currentPosition >= e.duration) {
+          audioRecorderPlayer.stopPlayer();
+          audioRecorderPlayer.removePlayBackListener();
+          console.log('Reprodução finalizada');
+        }
+      });
+  
+      console.log('Reproduzindo áudio:', audioPath);
+    } catch (error) {
+      console.error('Erro ao reproduzir áudio:', error);
+    }
+  };
+  
+  
+  
+  
+
+  const renderMensagem = ({ item, index }: { item: Mensagem; index: number }) => {
+    const showDate =
+      index === 0 ||
+      new Date(historico[index - 1].timestamp).getDate() !== new Date(item.timestamp).getDate();
+
     return (
       <View>
         {showDate && (
           <View style={styles.dateSeparator}>
-            <Text style={styles.dateSeparatorText}>
-              {formatRelativeDate(item.timestamp)}
-            </Text>
+            <Text style={styles.dateSeparatorText}>{formatRelativeDate(item.timestamp)}</Text>
           </View>
         )}
-        
-        <View style={[
-          styles.messageContainer,
-          item.isSent ? styles.sentMessage : styles.receivedMessage
-        ]}>
-          <View style={[
-            styles.messageBubble,
-            item.isSent ? styles.sentBubble : styles.receivedBubble
-          ]}>
+        <View
+          style={[
+            styles.messageContainer,
+            item.isSent ? styles.sentMessage : styles.receivedMessage,
+          ]}
+        >
+          <View
+            style={[
+              styles.messageBubble,
+              item.isSent ? styles.sentBubble : styles.receivedBubble,
+            ]}
+          >
             <Text style={styles.messageText}>{item.texto}</Text>
-            <Text style={[
-              styles.timestamp,
-              item.isSent ? styles.sentTimestamp : styles.receivedTimestamp
-            ]}>
+            {item.audioPath && (
+              <TouchableOpacity onPress={() => reproduzirAudio(item.audioPath || '')}>
+                <Text style={styles.audioLink}>▶️ Ouvir Áudio</Text>
+              </TouchableOpacity>
+            )}
+            <Text
+              style={[
+                styles.timestamp,
+                item.isSent ? styles.sentTimestamp : styles.receivedTimestamp,
+              ]}
+            >
               {formatDate(item.timestamp)}
             </Text>
           </View>
@@ -147,7 +258,7 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>{device.name}</Text>
-      
+
       <FlatList
         data={historico.sort((a, b) => a.timestamp - b.timestamp)}
         keyExtractor={(item) => item.id}
@@ -155,7 +266,7 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
         contentContainerStyle={styles.flatListContent}
         inverted={false}
       />
-      
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -164,31 +275,32 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
           onChangeText={setMensagem}
           onSubmitEditing={enviarMensagem}
         />
-        <TouchableOpacity 
-          style={[styles.sendButton, !mensagem.trim() && styles.disabledButton]} 
+        <TouchableOpacity
+          style={[styles.sendButton, !mensagem.trim() && styles.disabledButton]}
           onPress={enviarMensagem}
           disabled={!mensagem.trim()}
         >
-          <Image 
-            source={require('../../assets/send.png')} 
-            style={styles.sendIcon} 
-          />
+          <Image source={require('../../assets/send.png')} style={styles.sendIcon} />
         </TouchableOpacity>
-        <TouchableOpacity > 
-          <Image
-            source={require('../../assets/camm.png')} 
-            style = {styles.camButton}
-          />
+        <TouchableOpacity>
+          <Image source={require('../../assets/camm.png')} style={styles.camButton} />
         </TouchableOpacity>
-        
-        <TouchableOpacity> 
-          <Image 
-            source={require('../../assets/mic.png')}
-            style = {styles.micButton}
-          />
+        <TouchableOpacity onPress={iniciarGravacao}>
+          <Image source={require('../../assets/mic.png')} style={styles.micButton} />
         </TouchableOpacity>
-        
       </View>
+
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>Deseja enviar este áudio?</Text>
+            <View style={styles.modalButtons}>
+              <Button title="Cancelar" onPress={()=>{cancelarEnvioAudio}} color="red" />
+              <Button title="Enviar" onPress={()=>{pararGravacao();enviarAudio()}} color="green" />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -252,22 +364,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-
-    borderRadius: 15,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
   input: {
-    width:630,
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginRight: 8,
     fontSize: 16,
-    height: 40,
-    
+    marginRight: 8,
   },
   sendButton: {
     width: 48,
@@ -280,31 +388,55 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendIcon: {
-    width: 35,
-    height: 35,
+    width: 30,
+    height: 30,
+  },
+  camButton: {
+    width: 30,
+    height: 30,
+    marginHorizontal: 5,
+  },
+  micButton: {
+    width: 30,
+    height: 30,
+    marginHorizontal: 5,
+  },
+  audioLink: {
+    color: 'blue',
+    fontSize: 14,
+    marginTop: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: 300,
+    alignItems: 'center',
+  },
+  modalText: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
   },
   dateSeparator: {
-    alignSelf: 'center',
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 10,
+    alignItems: 'center',
+    marginVertical: 8,
   },
   dateSeparatorText: {
-    fontSize: 12,
-    color: '#555',
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#888',
   },
-  camButton:{
-    width: 40,
-    height: 35,
-
-  },
-  micButton:{
-    width:40,
-    height:35,
-
-  }
 });
 
 export default ChatScreen;
