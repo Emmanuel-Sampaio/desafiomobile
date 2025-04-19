@@ -1,6 +1,7 @@
 # 📱 Guia do Usuário - Chat Bluetooth App
 
-Bem-vindo ao **Chat Bluetooth App**, um aplicativo de **mensagens locais entre dispositivos Android via Bluetooth**. Com ele, você pode **trocar mensagens de texto, enviar fotos da galeria ou da câmera, gravar áudios e reproduzi-los** — tudo isso **sem precisar de internet**!
+Bem-vindo ao **Chat Bluetooth App**, um aplicativo de **mensagens locais entre dispositivos Android via Bluetooth**. Com ele, você pode **trocar mensagens de texto, enviar fotos da galeria ou da câmera, gravar áudios e reproduzi-los** — tudo isso **sem precisar de internet**! 
+Para o desenvolvimento desse APP, utilizei react-native CLI, pois era um projeto de médio porte e utilizava bibliotecas nativas, como a do bluetooth, bibliotecas essas que o expo não dá suporte.
 
 ---
 
