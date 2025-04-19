@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Animated, Easing
 } from 'react-native';
 import BluetoothClassic, {
   BluetoothDevice,
@@ -24,6 +25,24 @@ const HomeScreen = ({navigation}: any) => {
   const [selectedDevice, setSelectedDevice] = useState<BluetoothDevice | null>(null);
   const [pairedModalVisible, setPairedModalVisible] = useState(false);
   const [pairedDevices, setPairedDevices] = useState<BluetoothDevice[]>([]);
+  const [bounceAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: -15,
+        duration: 150,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.bounce,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
 
   // Verifica se o Bluetooth está ativado
@@ -275,6 +294,7 @@ const HomeScreen = ({navigation}: any) => {
   animationType="fade"
   onRequestClose={() => setPairedModalVisible(false)}
 >
+  
   <View style={styles.modalContainer}>
     <View style={styles.modalBox}>
       <Text style={styles.modalTitle}>Dispositivos Emparelhados</Text>
@@ -308,6 +328,8 @@ const HomeScreen = ({navigation}: any) => {
         >
           <Text style={styles.modalButtonText}>Fechar</Text>
         </TouchableOpacity>
+
+        
       </View>
     </View>
   </View>
