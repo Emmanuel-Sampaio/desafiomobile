@@ -4,11 +4,13 @@ import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioRecorderPlayer, { AudioSet, AVEncoderAudioQualityIOSType, AVEncodingOption } from 'react-native-audio-recorder-player';
-let audioRecorderPlayer: AudioRecorderPlayer = new AudioRecorderPlayer();
+import {launchCamera} from 'react-native-image-picker';
 
-type RootStackParamList = {
+
+export type RootStackParamList = {
   Home: undefined;
   Chat: { device: { name: string; address: string } };
+  Camera: undefined;
 };
 
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chat'>;
@@ -25,7 +27,8 @@ type Mensagem = {
   deviceId: string;
   timestamp: number;
   isSent: boolean;
-  audioPath?: string; // Para armazenar o caminho do áudio
+  audioPath?: string; 
+  imageUri?: string;
 };
 
 const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
@@ -155,11 +158,11 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
     try {
       setGravando(false); 
       
-      await pararGravacao(); // Garantir que a gravação seja parada antes de continuar
+      await pararGravacao(); 
   
       const novaMensagem: Mensagem = {
         id: Date.now().toString(),
-        texto: '[Áudio enviado]',
+        texto: 'Áudio enviado',
         deviceId: device.address,
         timestamp: Date.now(),
         isSent: true,
@@ -208,14 +211,11 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   };
   
   
-  
-  
-
   const renderMensagem = ({ item, index }: { item: Mensagem; index: number }) => {
     const showDate =
       index === 0 ||
       new Date(historico[index - 1].timestamp).getDate() !== new Date(item.timestamp).getDate();
-
+  
     return (
       <View>
         {showDate && (
@@ -235,12 +235,25 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
               item.isSent ? styles.sentBubble : styles.receivedBubble,
             ]}
           >
-            <Text style={styles.messageText}>{item.texto}</Text>
+            {/* Renderização condicional: imagem ou texto */}
+            {item.imageUri ? (
+              <Image 
+                source={{ uri: item.imageUri }} 
+                style={styles.imageMessage} 
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.messageText}>{item.texto}</Text>
+            )}
+  
+            {/* Áudio (mantido do código original) */}
             {item.audioPath && (
               <TouchableOpacity onPress={() => reproduzirAudio(item.audioPath || '')}>
                 <Text style={styles.audioLink}>▶️ Ouvir Áudio</Text>
               </TouchableOpacity>
             )}
+  
+            {/* Timestamp (mantido do código original) */}
             <Text
               style={[
                 styles.timestamp,
@@ -254,6 +267,61 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
       </View>
     );
   };
+  const solicitarPermissaoCamera = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    return true;
+  };
+
+  const enviarFoto = (fotoUri: string | undefined) => {
+    if (!fotoUri) return; 
+  
+    const novaMensagem: Mensagem = {
+      id: Date.now().toString(),
+      texto: 'Foto enviada',
+      deviceId: device.address,
+      timestamp: Date.now(),
+      isSent: true,
+      imageUri: fotoUri,
+    };
+  
+    setHistorico([...historico, novaMensagem]);
+  };
+
+
+
+  const abrirCamera = async () => {
+    const permissao = await solicitarPermissaoCamera();
+    if (!permissao) return;
+  
+    const options = {
+      mediaType: 'photo' as const,
+      includeBase64: false,
+      saveToPhotos: false,
+      cameraType: 'back' as const,
+    };
+  
+    launchCamera(options, (response) => {
+      if (response.didCancel) {
+        console.log('Usuário cancelou a câmera');
+      } else if (response.errorMessage) {
+        console.log('Erro na câmera: ', response.errorMessage);
+      } else if (response.assets && response.assets[0]?.uri) {
+        const fotoUri = response.assets[0].uri;
+        if (fotoUri) {
+          enviarFoto(fotoUri);
+        } else {
+          console.log('URI da foto é inválido');
+        }
+      }
+    });
+  };
+  
+  
 
   return (
     <View style={styles.container}>
@@ -282,7 +350,7 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
         >
           <Image source={require('../../assets/send.png')} style={styles.sendIcon} />
         </TouchableOpacity>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={abrirCamera}>
           <Image source={require('../../assets/camm.png')} style={styles.camButton} />
         </TouchableOpacity>
         <TouchableOpacity onPress={iniciarGravacao}>
@@ -436,6 +504,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     color: '#888',
+  },
+  imageMessage: {
+    width: 200,
+    height: 200,
+    borderRadius: 8,
+    marginVertical: 5,
   },
 });
 
