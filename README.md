@@ -150,18 +150,18 @@ Este app foi desenvolvido em **React Native** com foco em comunicação local vi
 
 - ## 🖼️ Telas do App
 
-- ** Mockup do aplicativo**
-  (./assets/mockup.jpeg)
-  Para ter um norte sobre como desenvolver a estilização do app, fiz esse mockup utilizando canva
+- **Mockup do aplicativo**  
+  ![Mockup do aplicativo](./assets/mockup.jpeg)  
+  *Para ter um norte sobre como desenvolver a estilização do app, fiz esse mockup utilizando Canva*
 
-- ** Tela Inicial do Aplicativo **
+- **Telas do Aplicativo**
 
-  ![Tela Inicial](./assets/telainicial.jpg)
+  ➤ **Tela Inicial**  
+  ![Tela Inicial](./assets/telainicial.jpeg)
 
-- ** Tela de Conexão Com Outros Aparelhos **
-![Tela de Conexão](./assets/teladeconexão.jpg)
+  ➤ **Tela de Conexão Com Outros Aparelhos** ⭐  
+  ![Tela de Conexão](./assets/teladeconexao.jpg)
 
-- ** Tela do Chat**
-- ![Tela de Chat](./assets/chat.jpg)
-
+  ➤ **Tela do Chat** ⭐  
+  ![Tela de Chat](./assets/chat.jpg)
 
