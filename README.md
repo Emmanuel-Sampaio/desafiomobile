@@ -148,3 +148,20 @@ Este app foi desenvolvido em **React Native** com foco em comunicação local vi
   Biblioteca de ícones vetoriais personalizáveis.
 
 
+- ## 🖼️ Telas do App
+
+- ** Mockup do aplicativo**
+  (./assets/mockup.jpeg)
+  Para ter um norte sobre como desenvolver a estilização do app, fiz esse mockup utilizando canva
+
+- ** Tela Inicial do Aplicativo **
+
+  ![Tela Inicial](./assets/telainicial.jpg)
+
+- ** Tela de Conexão Com Outros Aparelhos **
+![Tela de Conexão](./assets/teladeconexão.jpg)
+
+- ** Tela do Chat**
+- ![Tela de Chat](./assets/chat.jpg)
+
+
