@@ -157,10 +157,10 @@ Este app foi desenvolvido em **React Native** com foco em comunicação local vi
 - **Telas do Aplicativo**
 
   ➤ **Tela Inicial**  
-  ![Tela Inicial](./assets/telainicial.jpeg)
+  ![Tela Inicial](./assets/telainicial.jpg)
 
   ➤ **Tela de Conexão Com Outros Aparelhos** ⭐  
-  ![Tela de Conexão](./assets/teladeconexao.jpg)
+  ![Tela de Conexão](./assets/teladeconexão.jpg)
 
   ➤ **Tela do Chat** ⭐  
   ![Tela de Chat](./assets/chat.jpg)
