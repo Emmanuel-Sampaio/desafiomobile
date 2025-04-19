@@ -87,3 +87,64 @@ Se tiver problemas ou dúvidas, entre em contato com o desenvolvedor ou abra uma
 ---
 
 Obrigado por usar o **Chat Bluetooth App**! 💙
+
+
+## 🧩 Bibliotecas Utilizadas
+
+Este app foi desenvolvido em **React Native** com foco em comunicação local via **Bluetooth**, troca de mídias (fotos, áudios) e persistência de dados. Abaixo estão listadas as bibliotecas utilizadas, suas versões e finalidades:
+
+### 📱 Navegação
+- **@react-navigation/native** (`^7.1.6`)  
+  Gerencia a navegação entre as telas do app.
+
+- **@react-navigation/native-stack** (`^7.3.10`)  
+  Fornece uma navegação baseada em pilha utilizando implementações nativas.
+
+- **@react-navigation/stack** (`^7.2.10`)  
+  Alternativa para navegação empilhada com maior flexibilidade para customização.
+
+### 🎧 Áudio
+- **react-native-audio-record** (`^0.2.2`)  
+  Permite gravar áudios a partir do microfone do dispositivo.
+
+- **react-native-audio-recorder-player** (`^3.6.12`)  
+  Biblioteca completa para gravação e reprodução de áudio com controle de tempo.
+
+- **react-native-sound** (`^0.11.2`)  
+  Utilizada para tocar arquivos de áudio locais com boa performance.
+
+### 🔗 Conectividade Bluetooth
+- **react-native-bluetooth-classic** (`^1.73.0-rc.13`)  
+  Permite comunicação entre dispositivos Android via Bluetooth Clássico (SPP/Serial).
+
+### 🖼️ Mídia (Fotos e Vídeos)
+- **react-native-image-picker** (`^8.2.0`)  
+  Usada para acessar a câmera ou galeria e selecionar ou capturar imagens.
+
+- **react-native-vision-camera** (`^4.6.4`)  
+  Biblioteca poderosa para controle avançado da câmera (utilizada apenas parcialmente).
+
+### 💾 Armazenamento e Arquivos
+- **@react-native-async-storage/async-storage** (`^2.1.2`)  
+  Armazena dados localmente no dispositivo (como cache, histórico, preferências).
+
+- **react-native-fs** (`^2.20.0`)  
+  Manipula arquivos no sistema de arquivos local, leitura e escrita de arquivos (áudios, imagens, etc).
+
+### 💅 Interface e Estilo
+- **react-native-gesture-handler** (`^2.25.0`)  
+  Lida com gestos (toques, swipes) de forma fluida.
+
+- **react-native-reanimated** (`^3.17.3`)  
+  Permite animações mais suaves e performáticas na interface.
+
+- **react-native-safe-area-context** (`^5.3.0`)  
+  Garante que o conteúdo do app respeite as áreas seguras da tela (notch, barra de status, etc).
+
+- **react-native-screens** (`^4.10.0`)  
+  Otimiza o gerenciamento de telas com melhor performance.
+
+- **react-native-vector-icons** (`^10.2.0`)  
+  Biblioteca de ícones vetoriais personalizáveis.
+
+
