@@ -165,3 +165,5 @@ Este app foi desenvolvido em **React Native** com foco em comunicação local vi
   ➤ **Tela do Chat** ⭐  
   ![Tela de Chat](./assets/chat.jpg)
 
+  ➤ **Vídeo de funcionamento do App em um dispositivo android ** ⭐
+   ![Video de Funcionamento](./assets/teste.mp4)
