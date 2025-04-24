@@ -11,7 +11,6 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  Animated, Easing
 } from 'react-native';
 import BluetoothClassic, {
   BluetoothDevice,
@@ -25,24 +24,9 @@ const HomeScreen = ({navigation}: any) => {
   const [selectedDevice, setSelectedDevice] = useState<BluetoothDevice | null>(null);
   const [pairedModalVisible, setPairedModalVisible] = useState(false);
   const [pairedDevices, setPairedDevices] = useState<BluetoothDevice[]>([]);
-  const [bounceAnim] = useState(new Animated.Value(0));
+ 
 
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(bounceAnim, {
-        toValue: -15,
-        duration: 150,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(bounceAnim, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.bounce,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  
 
 
   // Verifica se o Bluetooth está ativado
@@ -105,22 +89,42 @@ const HomeScreen = ({navigation}: any) => {
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        ]);
-
-        return Object.values(granted).every(
-          (result) => result === PermissionsAndroid.RESULTS.GRANTED
-        );
+        // Para Android 11 (API 30) e abaixo
+        if (Platform.Version < 31) {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: 'Permissão de Localização',
+              message: 'O aplicativo precisa da permissão de localização para buscar dispositivos Bluetooth',
+              buttonNeutral: 'Perguntar depois',
+              buttonNegative: 'Cancelar',
+              buttonPositive: 'OK',
+            }
+          );
+          
+          return granted === PermissionsAndroid.RESULTS.GRANTED;
+        }
+        // Para Android 12 (API 31) e acima
+        else {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          ]);
+          
+          return (
+            granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED
+          );
+        }
       } catch (err) {
-        console.warn(err);
+        console.warn('Erro ao solicitar permissões:', err);
         return false;
       }
     }
     return true;
   };
+  
 
   const scanDevices = async () => {
     try {
@@ -171,6 +175,7 @@ const HomeScreen = ({navigation}: any) => {
         {
           text: 'Conectar',
           onPress: () => connectToDevice(device),
+         
         },
       ],
     );

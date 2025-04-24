@@ -4,12 +4,15 @@ import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioRecorderPlayer, { AudioSet, AVEncoderAudioQualityIOSType, AVEncodingOption } from 'react-native-audio-recorder-player';
+import Sound from 'react-native-sound';
 import {launchCamera} from 'react-native-image-picker';
+import BluetoothSerial, {BluetoothDevice}  from 'react-native-bluetooth-classic';
 
 
 export type RootStackParamList = {
   Home: undefined;
-  Chat: { device: { name: string; address: string } };
+  // agora Chat recebe um BluetoothDevice real
+  Chat: { device: BluetoothDevice };
   Camera: undefined;
 };
 
@@ -68,20 +71,89 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
     saveMessages();
   }, [historico]);
 
-  const enviarMensagem = async () => {
-    if (mensagem.trim() === '') return;
 
-    const novaMensagem: Mensagem = {
-      id: Date.now().toString(),
-      texto: mensagem,
-      deviceId: device.address,
-      timestamp: Date.now(),
-      isSent: true,
+  useEffect(() => {
+    let subscription: any;
+  
+    if (device) {
+      const anyDevice = device as any;
+  
+      subscription = anyDevice.onDataReceived((event: { data: string }) => {
+        try {
+          const msg = JSON.parse(event.data);
+  
+          const novaMensagem: Mensagem = {
+            id: Date.now().toString(),
+            texto: msg.type === 'text' ? msg.content : '',
+            deviceId: device.address,
+            timestamp: msg.timestamp || Date.now(),
+            isSent: false,
+            ...(msg.type === 'audio' && { audioPath: msg.content }),
+            ...(msg.type === 'image' && { imageUri: msg.content }),
+          };
+  
+       
+          setHistorico(prev => [...prev, novaMensagem]);
+        } catch (error) {
+          console.error('Erro ao processar dados recebidos via Bluetooth:', error);
+        }
+      });
+    }
+  
+    return () => {
+      if (subscription && typeof subscription.remove === 'function') {
+        subscription.remove();
+      }
     };
+  }, [device]);
+  
+  
+  
 
-    setHistorico([...historico, novaMensagem]);
-    setMensagem('');
+  const enviarmensagembluetooth = async (text: string) => {
+    if (!device || !device.write) {
+      console.warn('Dispositivo Bluetooth não inicializado ou sem método write');
+      return;
+    }
+    const payload = JSON.stringify({
+      type: 'text',
+      content: text,
+      timestamp: Date.now(),
+    });
+  
+    try {
+      await device.write(payload);
+      console.log('Texto enviado via Bluetooth:', payload);
+    } catch (error) {
+      console.error('Erro ao enviar texto via Bluetooth:', error);
+    }
   };
+
+
+
+const enviarMensagem = async () => {
+  if (mensagem.trim() === '') return;
+
+  const novaMensagem: Mensagem = {
+    id: Date.now().toString(),
+    texto: mensagem,
+    deviceId: device.address,
+    timestamp: Date.now(),
+    isSent: true,
+  };
+
+  setHistorico(prev => [...prev, novaMensagem]);
+  setMensagem('');
+
+  
+  try {
+    await enviarmensagembluetooth(novaMensagem.texto);
+    console.log('Mensagem enviada com sucesso via Bluetooth');
+  } catch (error) {
+    console.error('Erro ao enviar mensagem via Bluetooth:', error);
+  }
+};
+
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -154,28 +226,34 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
       console.log("Erro ao cancelar envio de áudio:", error);
     }
   };
-  const enviarAudio = async () => {
+  const enviarAudio = async (path: string) => {
+    if (!device) return;
+  
+    const mensagem = {
+      type: 'audio',
+      content: path, // Caminho local do áudio no dispositivo
+      timestamp: Date.now(),
+    };
+  
     try {
-      setGravando(false); 
-      
-      await pararGravacao(); 
+      const json = JSON.stringify(mensagem);
+      await device.write(json);
   
       const novaMensagem: Mensagem = {
         id: Date.now().toString(),
-        texto: 'Áudio enviado',
+        texto: '',
         deviceId: device.address,
-        timestamp: Date.now(),
+        timestamp: mensagem.timestamp,
         isSent: true,
-        audioPath: audioPath,
+        audioPath: path,
       };
   
-      setHistorico([...historico, novaMensagem]);
-      setModalVisible(false);
-      setAudioPath('');
+      setHistorico(prev => [...prev, novaMensagem]);
     } catch (error) {
-      console.log("Erro ao enviar áudio:", error);
+      console.error('Erro ao enviar áudio:', error);
     }
   };
+  
   
   
   const pedirPermissoesArmazenamento = async () => {
@@ -187,28 +265,21 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   };
 
-  const reproduzirAudio = async (audioPath: string) => {
-    if (!audioPath) {
-      console.warn('Caminho de áudio inválido');
+
+const reproduzirAudio = (path: string) => {
+  const sound = new Sound(path, '', (error) => {
+    if (error) {
+      console.log('Erro ao carregar áudio', error);
       return;
     }
-  
-    try {
-      await audioRecorderPlayer.startPlayer(audioPath);
-  
-      audioRecorderPlayer.addPlayBackListener((e) => {
-        if (e.currentPosition >= e.duration) {
-          audioRecorderPlayer.stopPlayer();
-          audioRecorderPlayer.removePlayBackListener();
-          console.log('Reprodução finalizada');
-        }
-      });
-  
-      console.log('Reproduzindo áudio:', audioPath);
-    } catch (error) {
-      console.error('Erro ao reproduzir áudio:', error);
-    }
-  };
+    sound.play((success) => {
+      if (!success) {
+        console.log('Erro na reprodução do áudio');
+      }
+    });
+  });
+};
+
   
   
   const renderMensagem = ({ item, index }: { item: Mensagem; index: number }) => {
@@ -235,7 +306,7 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
               item.isSent ? styles.sentBubble : styles.receivedBubble,
             ]}
           >
-            {/* Renderização condicional: imagem ou texto */}
+            
             {item.imageUri ? (
               <Image 
                 source={{ uri: item.imageUri }} 
@@ -246,14 +317,14 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
               <Text style={styles.messageText}>{item.texto}</Text>
             )}
   
-            {/* Áudio (mantido do código original) */}
+            
             {item.audioPath && (
               <TouchableOpacity onPress={() => reproduzirAudio(item.audioPath || '')}>
                 <Text style={styles.audioLink}>▶️ Ouvir Áudio</Text>
               </TouchableOpacity>
             )}
   
-            {/* Timestamp (mantido do código original) */}
+            
             <Text
               style={[
                 styles.timestamp,
@@ -277,20 +348,34 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
     return true;
   };
 
-  const enviarFoto = (fotoUri: string | undefined) => {
-    if (!fotoUri) return; 
+  const enviarFoto = async (uri: string) => {
+    if (!device) return;
   
-    const novaMensagem: Mensagem = {
-      id: Date.now().toString(),
-      texto: 'Foto enviada',
-      deviceId: device.address,
+    const mensagem = {
+      type: 'image',
+      content: uri, 
       timestamp: Date.now(),
-      isSent: true,
-      imageUri: fotoUri,
     };
   
-    setHistorico([...historico, novaMensagem]);
+    try {
+      const json = JSON.stringify(mensagem);
+      await device.write(json);
+  
+      const novaMensagem: Mensagem = {
+        id: Date.now().toString(),
+        texto: '',
+        deviceId: device.address,
+        timestamp: mensagem.timestamp,
+        isSent: true,
+        imageUri: uri,
+      };
+  
+      setHistorico(prev => [...prev, novaMensagem]);
+    } catch (error) {
+      console.error('Erro ao enviar imagem:', error);
+    }
   };
+  
 
 
 
@@ -328,12 +413,12 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
       <Text style={styles.titulo}>{device.name}</Text>
 
       <FlatList
-        data={historico.sort((a, b) => a.timestamp - b.timestamp)}
+        data={historico.sort((a, b) => a.timestamp - b.timestamp)}  // Ordena pelo timestamp
         keyExtractor={(item) => item.id}
         renderItem={renderMensagem}
         contentContainerStyle={styles.flatListContent}
         inverted={false}
-      />
+/>
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -364,7 +449,7 @@ const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
             <Text style={styles.modalText}>Deseja enviar este áudio?</Text>
             <View style={styles.modalButtons}>
               <Button title="Cancelar" onPress={()=>{cancelarEnvioAudio}} color="red" />
-              <Button title="Enviar" onPress={()=>{pararGravacao();enviarAudio()}} color="green" />
+              <Button title="Enviar" onPress={() => enviarAudio(audioPath)} color= "Green" />
             </View>
           </View>
         </View>
